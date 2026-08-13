@@ -18,6 +18,8 @@ data class TaskListUiState(
     val totalCount: Int = 0,
     val completedCount: Int = 0,
     val currentFilter: TaskFilter = TaskFilter.ALL,
+    val currentSort: TaskSortOption = TaskSortOption.CREATED_DESC,
+    val sortDirection: TaskSortDirection = TaskSortDirection.ASCENDING,
     val inputText: String = "",
     val errorMessage: String? = null,
     val taskToDelete: StudyTask? = null
@@ -34,28 +36,64 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
     private val _currentFilter = MutableStateFlow(TaskFilter.ALL)
     val currentFilter: StateFlow<TaskFilter> = _currentFilter.asStateFlow()
 
+    private val _currentSort = MutableStateFlow(TaskSortOption.CREATED_DESC)
+    val currentSort: StateFlow<TaskSortOption> = _currentSort.asStateFlow()
+
+    private val _sortDirection = MutableStateFlow(TaskSortDirection.ASCENDING)
+    val sortDirection: StateFlow<TaskSortDirection> = _sortDirection.asStateFlow()
+
     private val _taskToDelete = MutableStateFlow<StudyTask?>(null)
     val taskToDelete: StateFlow<StudyTask?> = _taskToDelete.asStateFlow()
 
     val uiState: StateFlow<TaskListUiState> = combine(
         repository.allTasks,
         _currentFilter,
+        _currentSort,
+        _sortDirection,
         _inputText,
         _errorMessage,
         _taskToDelete
-    ) { tasks, filter, input, error, taskToDelete ->
+    ) { flows ->
+        val tasks = flows[0] as List<StudyTask>
+        val filter = flows[1] as TaskFilter
+        val sort = flows[2] as TaskSortOption
+        val direction = flows[3] as TaskSortDirection
+        val input = flows[4] as String
+        val error = flows[5] as String?
+        val taskToDelete = flows[6] as StudyTask?
+
         val completedCount = tasks.count { it.isCompleted }
         val filtered = when (filter) {
             TaskFilter.ALL -> tasks
             TaskFilter.INCOMPLETE -> tasks.filter { !it.isCompleted }
             TaskFilter.COMPLETED -> tasks.filter { it.isCompleted }
         }
+
+        val sorted = when (sort) {
+            TaskSortOption.CREATED_DESC -> {
+                if (direction == TaskSortDirection.ASCENDING) filtered.sortedBy { it.id }
+                else filtered.sortedByDescending { it.id }
+            }
+            TaskSortOption.REMAINING_TIME -> {
+                if (direction == TaskSortDirection.ASCENDING)
+                    filtered.sortedBy { it.remainingSeconds ?: (it.selectedMinutes * 60) }
+                else
+                    filtered.sortedByDescending { it.remainingSeconds ?: (it.selectedMinutes * 60) }
+            }
+            TaskSortOption.NAME -> {
+                if (direction == TaskSortDirection.ASCENDING) filtered.sortedBy { it.title }
+                else filtered.sortedByDescending { it.title }
+            }
+        }
+
         TaskListUiState(
             tasks = tasks,
-            filteredTasks = filtered,
+            filteredTasks = sorted,
             totalCount = tasks.size,
             completedCount = completedCount,
             currentFilter = filter,
+            currentSort = sort,
+            sortDirection = direction,
             inputText = input,
             errorMessage = error,
             taskToDelete = taskToDelete
@@ -118,6 +156,18 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
 
     fun setFilter(filter: TaskFilter) {
         _currentFilter.value = filter
+    }
+
+    fun setSort(sort: TaskSortOption) {
+        _currentSort.value = sort
+    }
+
+    fun toggleSortDirection() {
+        _sortDirection.value = if (_sortDirection.value == TaskSortDirection.ASCENDING) {
+            TaskSortDirection.DESCENDING
+        } else {
+            TaskSortDirection.ASCENDING
+        }
     }
 
     fun clearError() {

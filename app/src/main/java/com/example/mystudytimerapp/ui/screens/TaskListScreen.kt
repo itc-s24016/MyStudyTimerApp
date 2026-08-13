@@ -11,7 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
@@ -32,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mystudytimerapp.data.StudyTask
 import com.example.mystudytimerapp.ui.viewmodel.TaskFilter
+import com.example.mystudytimerapp.ui.viewmodel.TaskSortOption
+import com.example.mystudytimerapp.ui.viewmodel.TaskSortDirection
 import com.example.mystudytimerapp.ui.viewmodel.TaskListUiState
 import com.example.mystudytimerapp.ui.viewmodel.TaskListViewModel
 
@@ -180,6 +185,8 @@ fun TaskListScreen(
             }
 
             // Section 8 (Advanced 2): Filter Chips and Bulk Delete
+            var showSortMenu by remember { mutableStateOf(false) }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -188,6 +195,7 @@ fun TaskListScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -198,20 +206,104 @@ fun TaskListScreen(
                             label = { Text(filter.label, fontSize = 12.sp) }
                         )
                     }
-                }
 
-                // Advanced 1: Delete completed tasks button
-                if (uiState.completedCount > 0) {
-                    IconButton(
-                        onClick = { viewModel.deleteCompletedTasks() },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box {
+                        AssistChip(
+                            onClick = { showSortMenu = true },
+                            label = {
+                                Text(
+                                    text = uiState.currentSort.label,
+                                    fontSize = 12.sp
+                                )
+                            },
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         )
+
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            TaskSortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.label) },
+                                    onClick = {
+                                        viewModel.setSort(option)
+                                        showSortMenu = false
+                                    },
+                                    leadingIcon = {
+                                        if (uiState.currentSort == option) {
+                                            Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.toggleSortDirection() },
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.DeleteSweep,
-                            contentDescription = "完了済みを削除"
+                            imageVector = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
+                                Icons.Default.ArrowUpward
+                            else
+                                Icons.Default.ArrowDownward,
+                            contentDescription = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
+                                "昇順"
+                            else
+                                "降順",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { viewModel.toggleSortDirection() },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
+                                Icons.Default.ArrowUpward
+                            else
+                                Icons.Default.ArrowDownward,
+                            contentDescription = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
+                                "昇順"
+                            else
+                                "降順",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    // Advanced 1: Delete completed tasks button
+                    if (uiState.completedCount > 0) {
+                        IconButton(
+                            onClick = { viewModel.deleteCompletedTasks() },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteSweep,
+                                contentDescription = "完了済みを削除"
+                            )
+                        }
                     }
                 }
             }
