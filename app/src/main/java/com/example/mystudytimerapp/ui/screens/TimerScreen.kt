@@ -228,20 +228,44 @@ fun TimerScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                Surface(
-                    shape = RoundedCornerShape(32.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .scale(if (uiState.isFinished) pulseScale else 1.0f)
-                        .padding(12.dp)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Text(
-                        text = formattedTime,
-                        fontSize = 64.sp,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 36.dp, vertical = 16.dp)
+                    val totalSeconds = uiState.selectedMinutes * 60
+                    val progress = if (uiState.isFinished) 1f 
+                                   else (totalSeconds - uiState.remainingSeconds).toFloat() / totalSeconds
+                    
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = progress,
+                        animationSpec = tween(durationMillis = 500, easing = LinearOutSlowInEasing),
+                        label = "timerProgress"
                     )
+
+                    CircularProgressIndicator(
+                        progress = { animatedProgress },
+                        modifier = Modifier.size(240.dp),
+                        strokeWidth = 10.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+                    )
+
+                    Surface(
+                        shape = RoundedCornerShape(32.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .scale(if (uiState.isFinished) pulseScale else 1.0f)
+                            .padding(12.dp)
+                    ) {
+                        Text(
+                            text = formattedTime,
+                            fontSize = 64.sp,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 36.dp, vertical = 16.dp)
+                        )
+                    }
                 }
             }
 

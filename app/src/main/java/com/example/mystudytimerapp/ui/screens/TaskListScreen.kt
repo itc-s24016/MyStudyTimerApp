@@ -252,24 +252,6 @@ fun TaskListScreen(
                             }
                         }
                     }
-
-                    IconButton(
-                        onClick = { viewModel.toggleSortDirection() },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
-                                Icons.Default.ArrowUpward
-                            else
-                                Icons.Default.ArrowDownward,
-                            contentDescription = if (uiState.sortDirection == TaskSortDirection.ASCENDING)
-                                "昇順"
-                            else
-                                "降順",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -458,6 +440,26 @@ fun TaskItemRow(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                // Progress Bar
+                val totalSec = task.selectedMinutes * 60
+                val currentRem = task.remainingSeconds ?: totalSec
+                val progress = if (task.isCompleted) 1f else (totalSec - currentRem).toFloat() / totalSec
+                if (progress > 0f || task.isCompleted) {
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp)),
+                        color = if (task.isCompleted)
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        else
+                            MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                 }
             }

@@ -1,0 +1,3 @@
+- [x] TaskListScreen: Add linear progress bar to TaskItemRow
+- [x] TimerScreen: Add circular progress indicator around the timer
+- [x] Verification: Build and check UI manually
