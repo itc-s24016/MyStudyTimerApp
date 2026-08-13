@@ -312,6 +312,9 @@ fun TaskItemRow(
     onStartTimer: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val remSec = task.remainingSeconds
+    val isPaused = !task.isCompleted && remSec != null && remSec < task.selectedMinutes * 60
+
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
@@ -335,24 +338,39 @@ fun TaskItemRow(
                 onCheckedChange = { onToggleComplete() }
             )
 
-            // Task title with strikethrough if completed
-            Text(
-                text = task.title,
+            // Task title and remaining time display for in-progress / paused tasks
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 8.dp),
-                fontSize = 16.sp,
-                fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium,
-                color = if (task.isCompleted)
-                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                else
-                    MaterialTheme.colorScheme.onSurface,
-                textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+                    .padding(horizontal = 8.dp)
+            ) {
+                Text(
+                    text = task.title,
+                    fontSize = 16.sp,
+                    fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium,
+                    color = if (task.isCompleted)
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    else
+                        MaterialTheme.colorScheme.onSurface,
+                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (isPaused) {
+                    val minutes = remSec / 60
+                    val seconds = remSec % 60
+                    val formattedTime = String.format("%d:%02d", minutes, seconds)
+                    Text(
+                        text = "残り時間 $formattedTime",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+            }
 
-            // Timer Start Button
+            // Timer Start / Resume Button
             FilledTonalButton(
                 onClick = onStartTimer,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -365,7 +383,7 @@ fun TaskItemRow(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(2.dp))
-                Text("開始", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(if (isPaused) "再開" else "開始", fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
 
             // Delete Button
