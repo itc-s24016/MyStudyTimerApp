@@ -17,6 +17,10 @@ class StudyTaskRepository(private val dao: StudyTaskDao) {
         dao.delete(task)
     }
 
+    suspend fun deleteTasks(tasks: List<StudyTask>) {
+        dao.deleteTasks(tasks)
+    }
+
     suspend fun deleteCompleted() {
         dao.deleteCompleted()
     }

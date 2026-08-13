@@ -1,32 +1,41 @@
-# 進捗メーター追加の実施計画
+# 学習履歴の削除機能の実装計画
 
-各画面に学習の進捗状況を視覚的に表示するメーターを追加し、ユーザーが直感的に進み具合を把握できるようにします。
+学習履歴画面において、個別の選択削除および全履歴の一括削除機能を追加します。
 
 ## Proposed Changes
 
-### UI コンポーネントの追加
+### データレイヤー (Data Layer)
 
-#### [MODIFY] [TaskListScreen.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/ui/screens/TaskListScreen.kt)
-- `TaskItemRow` 内に、タスクタイトルの下に進捗を示す `LinearProgressIndicator` を追加します。
-- **計算ロジック**:
-  - 完了済みの場合: 100% (1.0f)
-  - 未開始（`remainingSeconds` が null）の場合: 0% (0.0f)
-  - 進行中の場合: `(全時間 - 残り時間) / 全時間`
-- デザイン: 背景色に馴染む色（`surfaceVariant` など）と強調色（`primary`）を組み合わせ、高さを抑えた控えめなバーにします。
+#### [MODIFY] [StudyTaskDao.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/data/StudyTaskDao.kt)
+- 複数のタスクを一括削除するための `@Delete` メソッド（引数に `List<StudyTask>` を取るもの）を追加します。
 
-#### [MODIFY] [TimerScreen.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/ui/screens/TimerScreen.kt)
-- タイマー中央の残り時間表示を囲むように `CircularProgressIndicator` を配置します。
-- **計算ロジック**: `(全時間 - 残り時間) / 全時間`
-- アニメーション: `animateFloatAsState` を使用し、1秒ごとの減少に合わせてメーターがスムーズに動くようにします。
-- デザイン: `Box` を使用して時間テキストと重ね合わせ、ストップウォッチのような外見を実現します。
+#### [MODIFY] [StudyTaskRepository.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/data/StudyTaskRepository.kt)
+- DAO の一括削除メソッドを呼び出すメソッドを追加します。
+
+### ViewModelレイヤー (ViewModel Layer)
+
+#### [MODIFY] [TaskListViewModel.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/ui/viewmodel/TaskListViewModel.kt)
+- `TaskListUiState` に `selectedHistoryIds: Set<Int>` を追加します。
+- 以下のメソッドを追加します：
+    - `toggleHistorySelection(taskId: Int)`: 履歴の選択状態を反転。
+    - `clearHistorySelection()`: 選択状態を解除。
+    - `deleteSelectedHistory()`: 選択された履歴を削除。
+    - `deleteAllHistory()`: すべての完了済みタスクを削除（既存の `deleteCompletedTasks` を流用または名称変更）。
+
+### UIレイヤー (UI Layer)
+
+#### [MODIFY] [HistoryScreen.kt](file:///home/s24016/AndroidStudioProjects/MyStudyTimerApp/app/src/main/java/com/example/mystudytimerapp/ui/screens/HistoryScreen.kt)
+- 各履歴アイテムに `Checkbox` を追加し、タップで選択できるようにします。
+- `TopAppBar` に「ゴミ箱」アイコン（選択削除用）と「三点リーダーメニュー」内またはボタンとして「全履歴削除」を追加します。
+- 削除実行前に確認ダイアログを表示するようにします。
 
 ## Verification Plan
 
 ### Automated Tests
-- 各状態（未開始、進行中、完了）における進捗率計算の整合性を確認します。
+- `TaskListViewModel` のユニットテストを追加し、選択削除と全削除が正しくリポジトリを呼び出すことを確認します。
 
 ### Manual Verification
-1. 学習一覧画面で新しいタスクを追加し、メーターが空であることを確認。
-2. タスクを開始して数秒経過後、一覧に戻り、バーが少し進んでいることを確認。
-3. タイマー画面で円状のメーターが時間の経過とともに一周に近づいていくことを確認。
-4. 学習完了ボタンを押した際、一覧画面でメーターが満タン（100%）になることを確認。
+1. 学習履歴画面を開く。
+2. いくつかの項目にチェックを入れ、削除ボタンを押して、それらが消えることを確認する。
+3. 「全履歴削除」ボタンを押し、すべての履歴が消えることを確認する。
+4. 削除前に確認ダイアログが表示されることを確認する。

@@ -20,6 +20,7 @@ data class TaskListUiState(
     val currentFilter: TaskFilter = TaskFilter.ALL,
     val currentSort: TaskSortOption = TaskSortOption.CREATED_DESC,
     val sortDirection: TaskSortDirection = TaskSortDirection.ASCENDING,
+    val selectedHistoryIds: Set<Int> = emptySet(),
     val inputText: String = "",
     val errorMessage: String? = null,
     val taskToDelete: StudyTask? = null
@@ -42,6 +43,9 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
     private val _sortDirection = MutableStateFlow(TaskSortDirection.ASCENDING)
     val sortDirection: StateFlow<TaskSortDirection> = _sortDirection.asStateFlow()
 
+    private val _selectedHistoryIds = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedHistoryIds: StateFlow<Set<Int>> = _selectedHistoryIds.asStateFlow()
+
     private val _taskToDelete = MutableStateFlow<StudyTask?>(null)
     val taskToDelete: StateFlow<StudyTask?> = _taskToDelete.asStateFlow()
 
@@ -50,6 +54,7 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
         _currentFilter,
         _currentSort,
         _sortDirection,
+        _selectedHistoryIds,
         _inputText,
         _errorMessage,
         _taskToDelete
@@ -58,9 +63,10 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
         val filter = flows[1] as TaskFilter
         val sort = flows[2] as TaskSortOption
         val direction = flows[3] as TaskSortDirection
-        val input = flows[4] as String
-        val error = flows[5] as String?
-        val taskToDelete = flows[6] as StudyTask?
+        val selectedIds = flows[4] as Set<Int>
+        val input = flows[5] as String
+        val error = flows[6] as String?
+        val taskToDelete = flows[7] as StudyTask?
 
         val completedCount = tasks.count { it.isCompleted }
         val filtered = when (filter) {
@@ -94,6 +100,7 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
             currentFilter = filter,
             currentSort = sort,
             sortDirection = direction,
+            selectedHistoryIds = selectedIds,
             inputText = input,
             errorMessage = error,
             taskToDelete = taskToDelete
@@ -167,6 +174,37 @@ class TaskListViewModel(private val repository: StudyTaskRepository) : ViewModel
             TaskSortDirection.DESCENDING
         } else {
             TaskSortDirection.ASCENDING
+        }
+    }
+
+    fun toggleHistorySelection(taskId: Int) {
+        val current = _selectedHistoryIds.value
+        _selectedHistoryIds.value = if (current.contains(taskId)) {
+            current - taskId
+        } else {
+            current + taskId
+        }
+    }
+
+    fun clearHistorySelection() {
+        _selectedHistoryIds.value = emptySet()
+    }
+
+    fun deleteSelectedHistory() {
+        val idsToDelete = _selectedHistoryIds.value
+        if (idsToDelete.isEmpty()) return
+        
+        viewModelScope.launch {
+            val tasksToDelete = uiState.value.tasks.filter { it.id in idsToDelete }
+            repository.deleteTasks(tasksToDelete)
+            _selectedHistoryIds.value = emptySet()
+        }
+    }
+
+    fun deleteAllHistory() {
+        viewModelScope.launch {
+            repository.deleteCompleted()
+            _selectedHistoryIds.value = emptySet()
         }
     }
 

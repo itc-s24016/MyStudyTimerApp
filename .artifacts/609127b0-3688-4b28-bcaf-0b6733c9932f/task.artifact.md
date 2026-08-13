@@ -1,3 +1,11 @@
-- [x] TaskListScreen: Add linear progress bar to TaskItemRow
-- [x] TimerScreen: Add circular progress indicator around the timer
-- [x] Verification: Build and check UI manually
+- [x] Data Layer: Add bulk delete support
+    - [x] `StudyTaskDao`: Add `deleteTasks(List<StudyTask>)`
+    - [x] `StudyTaskRepository`: Add `deleteTasks(List<StudyTask>)`
+- [x] ViewModel Layer: Implement history selection and deletion logic
+    - [x] `TaskListUiState`: Add `selectedHistoryIds`
+    - [x] `TaskListViewModel`: Add selection and deletion methods
+- [x] UI Layer: Update `HistoryScreen.kt`
+    - [x] Add Checkboxes to items
+    - [x] Add TopAppBar actions (Delete selected, Delete all)
+    - [x] Add confirmation dialogs
+- [/] Verification: Test the deletion flows manually
