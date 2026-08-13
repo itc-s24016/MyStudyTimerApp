@@ -434,8 +434,12 @@ fun TaskItemRow(
                     val minutes = remSec / 60
                     val seconds = remSec % 60
                     val formattedTime = String.format("%d:%02d", minutes, seconds)
+                    
+                    val totalSec = task.selectedMinutes * 60
+                    val formattedTotalTime = String.format("%d:%02d", totalSec / 60, totalSec % 60)
+                    
                     Text(
-                        text = "残り時間 $formattedTime",
+                        text = "$formattedTime / $formattedTotalTime",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -446,8 +450,8 @@ fun TaskItemRow(
                 // Progress Bar
                 val totalSec = task.selectedMinutes * 60
                 val currentRem = task.remainingSeconds ?: totalSec
-                val progress = if (task.isCompleted) 1f else (totalSec - currentRem).toFloat() / totalSec
-                if (progress > 0f || task.isCompleted) {
+                val progress = if (task.isCompleted) 0f else currentRem.toFloat() / totalSec
+                if (progress < 1f || task.isCompleted) {
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier

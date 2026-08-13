@@ -233,8 +233,8 @@ fun TimerScreen(
                     modifier = Modifier.padding(16.dp)
                 ) {
                     val totalSeconds = uiState.selectedMinutes * 60
-                    val progress = if (uiState.isFinished) 1f 
-                                   else (totalSeconds - uiState.remainingSeconds).toFloat() / totalSeconds
+                    val progress = if (uiState.isFinished) 0f 
+                                   else uiState.remainingSeconds.toFloat() / totalSeconds
                     
                     val animatedProgress by animateFloatAsState(
                         targetValue = progress,
