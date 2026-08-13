@@ -253,7 +253,6 @@ fun TimerScreen(
 
                     Surface(
                         shape = RoundedCornerShape(32.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
                         modifier = Modifier
                             .scale(if (uiState.isFinished) pulseScale else 1.0f)
                             .padding(12.dp)
@@ -330,7 +329,7 @@ fun TimerScreen(
                 if (!uiState.isRunning) {
                     Button(
                         onClick = { viewModel.startTimer() },
-                        enabled = !uiState.isFinished && uiState.remainingSeconds > 0,
+                        enabled = !uiState.isFinished && uiState.remainingSeconds > 0 && !uiState.isCompleted,
                         modifier = Modifier
                             .weight(1f)
                             .height(56.dp),

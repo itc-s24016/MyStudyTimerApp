@@ -28,6 +28,7 @@ data class TimerUiState(
     val isResumeMode: Boolean = false,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
+    val isCompleted: Boolean = false,
     val soundPlayed: Boolean = false
 )
 
@@ -61,12 +62,14 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                             isResumeMode = isResume,
                             isRunning = false,
                             isFinished = finished,
+                            isCompleted = task.isCompleted,
                             soundPlayed = false
                         )
                     } else {
                         currentState.copy(
                             taskTitle = task.title,
-                            task = task
+                            task = task,
+                            isCompleted = task.isCompleted
                         )
                     }
                 }

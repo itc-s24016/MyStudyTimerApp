@@ -471,6 +471,7 @@ fun TaskItemRow(
             // Timer Start / Resume Button
             FilledTonalButton(
                 onClick = onStartTimer,
+                enabled = !task.isCompleted,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.padding(end = 6.dp)
