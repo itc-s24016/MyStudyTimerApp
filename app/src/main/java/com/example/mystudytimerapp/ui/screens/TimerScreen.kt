@@ -9,7 +9,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -146,7 +148,7 @@ fun TimerScreen(
                 )
             }
 
-            // Duration Selector (1分, 5分, 25分) - Section 4.7
+            // Duration Selector (続きから, 1分, 5分, 25分) - Section 4.7 & Saved Progress Support
             Card(
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -167,18 +169,42 @@ fun TimerScreen(
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // "続きから" chip if saved progress is available
+                        val savedRem = uiState.savedRemainingSeconds
+                        if (savedRem != null) {
+                            val savedMin = savedRem / 60
+                            val savedSec = savedRem % 60
+                            val timeLabel = String.format("%d:%02d", savedMin, savedSec)
+                            FilterChip(
+                                selected = uiState.isResumeMode,
+                                onClick = { viewModel.selectResumeMode() },
+                                enabled = !uiState.isRunning,
+                                label = {
+                                    Text(
+                                        text = "続きから",
+                                        fontWeight = if (uiState.isResumeMode) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 14.sp
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+
                         listOf(1, 5, 25).forEach { min ->
                             FilterChip(
-                                selected = uiState.selectedMinutes == min,
+                                selected = !uiState.isResumeMode && uiState.selectedMinutes == min,
                                 onClick = { viewModel.selectMinutes(min) },
                                 enabled = !uiState.isRunning,
                                 label = {
                                     Text(
                                         text = "${min}分",
-                                        fontWeight = if (uiState.selectedMinutes == min) FontWeight.Bold else FontWeight.Normal,
+                                        fontWeight = if (!uiState.isResumeMode && uiState.selectedMinutes == min) FontWeight.Bold else FontWeight.Normal,
                                         fontSize = 15.sp
                                     )
                                 },
@@ -292,7 +318,7 @@ fun TimerScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (uiState.remainingSeconds < uiState.selectedMinutes * 60) "再開" else "開始",
+                            text = if (uiState.isResumeMode || uiState.remainingSeconds < uiState.selectedMinutes * 60) "再開" else "開始",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )

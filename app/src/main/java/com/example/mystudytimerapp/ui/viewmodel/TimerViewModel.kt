@@ -24,6 +24,8 @@ data class TimerUiState(
     val task: StudyTask? = null,
     val selectedMinutes: Int = 25,
     val remainingSeconds: Int = 25 * 60,
+    val savedRemainingSeconds: Int? = null,
+    val isResumeMode: Boolean = false,
     val isRunning: Boolean = false,
     val isFinished: Boolean = false,
     val soundPlayed: Boolean = false
@@ -43,14 +45,20 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                 _uiState.update { currentState ->
                     if (currentState.taskId != taskId) {
                         val selMin = task.selectedMinutes
-                        val remSec = task.remainingSeconds ?: (selMin * 60)
+                        val savedRem = task.remainingSeconds
+                        val hasSavedProgress = savedRem != null && savedRem < (selMin * 60) && savedRem > 0
+                        val isResume = hasSavedProgress
+                        val remSec = if (isResume && savedRem != null) savedRem else (selMin * 60)
                         val finished = remSec <= 0
+
                         currentState.copy(
                             taskId = task.id,
                             taskTitle = task.title,
                             task = task,
                             selectedMinutes = selMin,
                             remainingSeconds = remSec,
+                            savedRemainingSeconds = if (hasSavedProgress) savedRem else null,
+                            isResumeMode = isResume,
                             isRunning = false,
                             isFinished = finished,
                             soundPlayed = false
@@ -73,17 +81,30 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
             it.copy(
                 selectedMinutes = minutes,
                 remainingSeconds = newSeconds,
+                isResumeMode = false,
                 isFinished = false,
                 soundPlayed = false
             )
         }
-        saveProgress()
+    }
+
+    fun selectResumeMode() {
+        if (_uiState.value.isRunning) return
+        val saved = _uiState.value.savedRemainingSeconds ?: return
+        _uiState.update {
+            it.copy(
+                remainingSeconds = saved,
+                isResumeMode = true,
+                isFinished = false,
+                soundPlayed = false
+            )
+        }
     }
 
     fun startTimer() {
         if (_uiState.value.remainingSeconds <= 0) return
         timerJob?.cancel()
-        _uiState.update { it.copy(isRunning = true) }
+        _uiState.update { it.copy(isRunning = true, isResumeMode = true) }
 
         timerJob = viewModelScope.launch {
             while (_uiState.value.remainingSeconds > 0 && _uiState.value.isRunning) {
@@ -93,11 +114,15 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                     if (nextSeconds == 0) {
                         state.copy(
                             remainingSeconds = 0,
+                            savedRemainingSeconds = 0,
                             isRunning = false,
                             isFinished = true
                         )
                     } else {
-                        state.copy(remainingSeconds = nextSeconds)
+                        state.copy(
+                            remainingSeconds = nextSeconds,
+                            savedRemainingSeconds = nextSeconds
+                        )
                     }
                 }
             }
@@ -109,7 +134,17 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
 
     fun pauseTimer() {
         timerJob?.cancel()
-        _uiState.update { it.copy(isRunning = false) }
+        _uiState.update {
+            val updatedSaved = if (it.isResumeMode || it.remainingSeconds < it.selectedMinutes * 60) {
+                it.remainingSeconds
+            } else {
+                it.savedRemainingSeconds
+            }
+            it.copy(
+                isRunning = false,
+                savedRemainingSeconds = updatedSaved
+            )
+        }
         saveProgress()
     }
 
@@ -119,6 +154,8 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
         _uiState.update {
             it.copy(
                 remainingSeconds = resetSeconds,
+                savedRemainingSeconds = null,
+                isResumeMode = false,
                 isRunning = false,
                 isFinished = false,
                 soundPlayed = false
@@ -168,10 +205,16 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
 
     fun saveProgress() {
         val currentTask = _uiState.value.task ?: return
+        val state = _uiState.value
+        val remToSave = if (state.isResumeMode || (state.remainingSeconds < state.selectedMinutes * 60 && state.remainingSeconds > 0)) {
+            state.remainingSeconds
+        } else {
+            state.savedRemainingSeconds
+        }
         viewModelScope.launch {
             val updatedTask = currentTask.copy(
-                selectedMinutes = _uiState.value.selectedMinutes,
-                remainingSeconds = _uiState.value.remainingSeconds
+                selectedMinutes = state.selectedMinutes,
+                remainingSeconds = remToSave
             )
             repository.update(updatedTask)
             _uiState.update { it.copy(task = updatedTask) }
