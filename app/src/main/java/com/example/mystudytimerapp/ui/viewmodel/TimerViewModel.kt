@@ -7,13 +7,16 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mystudytimerapp.data.StudyTask
 import com.example.mystudytimerapp.data.StudyTaskRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TimerUiState(
     val taskId: Int = 0,
@@ -38,16 +41,18 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
             val task = repository.getTaskById(taskId)
             if (task != null) {
                 _uiState.update { currentState ->
-                    // Only update task info if not already loaded or matching
                     if (currentState.taskId != taskId) {
-                        val seconds = currentState.selectedMinutes * 60
+                        val selMin = task.selectedMinutes
+                        val remSec = task.remainingSeconds ?: (selMin * 60)
+                        val finished = remSec <= 0
                         currentState.copy(
                             taskId = task.id,
                             taskTitle = task.title,
                             task = task,
-                            remainingSeconds = seconds,
+                            selectedMinutes = selMin,
+                            remainingSeconds = remSec,
                             isRunning = false,
-                            isFinished = false,
+                            isFinished = finished,
                             soundPlayed = false
                         )
                     } else {
@@ -63,14 +68,16 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
 
     fun selectMinutes(minutes: Int) {
         if (_uiState.value.isRunning) return
+        val newSeconds = minutes * 60
         _uiState.update {
             it.copy(
                 selectedMinutes = minutes,
-                remainingSeconds = minutes * 60,
+                remainingSeconds = newSeconds,
                 isFinished = false,
                 soundPlayed = false
             )
         }
+        saveProgress()
     }
 
     fun startTimer() {
@@ -94,12 +101,16 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                     }
                 }
             }
+            if (_uiState.value.remainingSeconds == 0) {
+                saveProgress()
+            }
         }
     }
 
     fun pauseTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false) }
+        saveProgress()
     }
 
     fun resetTimer() {
@@ -113,6 +124,7 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                 soundPlayed = false
             )
         }
+        saveProgress()
     }
 
     fun playSoundEffect() {
@@ -134,7 +146,8 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                 repository.update(
                     currentTask.copy(
                         isCompleted = true,
-                        completedAt = System.currentTimeMillis()
+                        completedAt = System.currentTimeMillis(),
+                        remainingSeconds = null
                     )
                 )
             } else if (_uiState.value.taskId > 0) {
@@ -143,12 +156,25 @@ class TimerViewModel(private val repository: StudyTaskRepository) : ViewModel() 
                     repository.update(
                         fetched.copy(
                             isCompleted = true,
-                            completedAt = System.currentTimeMillis()
+                            completedAt = System.currentTimeMillis(),
+                            remainingSeconds = null
                         )
                     )
                 }
             }
             onCompleteNav()
+        }
+    }
+
+    fun saveProgress() {
+        val currentTask = _uiState.value.task ?: return
+        viewModelScope.launch {
+            val updatedTask = currentTask.copy(
+                selectedMinutes = _uiState.value.selectedMinutes,
+                remainingSeconds = _uiState.value.remainingSeconds
+            )
+            repository.update(updatedTask)
+            _uiState.update { it.copy(task = updatedTask) }
         }
     }
 

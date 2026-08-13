@@ -1,5 +1,6 @@
 package com.example.mystudytimerapp.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -36,6 +37,12 @@ fun TimerScreen(
     onNavigateBack: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Handle system back gesture / back button press
+    BackHandler {
+        viewModel.pauseTimer()
+        onNavigateBack()
+    }
 
     // Initialize task data when screen is loaded
     LaunchedEffect(taskId) {
@@ -86,7 +93,10 @@ fun TimerScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        viewModel.pauseTimer()
+                        onNavigateBack()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "戻る"

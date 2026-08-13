@@ -96,4 +96,36 @@ class TimerViewModelTest {
         val updatedTask = repository.getTaskById(1)
         assertTrue(updatedTask?.isCompleted == true)
     }
+
+    @Test
+    fun pauseTimer_persistsProgressAndRestoresOnReinit() = runTest {
+        val task = StudyTask(id = 1, title = "Kotlinの復習", isCompleted = false)
+        repository.insert(task)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.initTask(1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.selectMinutes(5)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.startTimer()
+        testDispatcher.scheduler.advanceTimeBy(10000)
+        testDispatcher.scheduler.runCurrent()
+        viewModel.pauseTimer()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val savedTask = repository.getTaskById(1)
+        assertEquals(5, savedTask?.selectedMinutes)
+        assertEquals(290, savedTask?.remainingSeconds)
+
+        val newViewModel = TimerViewModel(repository)
+        newViewModel.initTask(1)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val newState = newViewModel.uiState.value
+        assertEquals(5, newState.selectedMinutes)
+        assertEquals(290, newState.remainingSeconds)
+        assertFalse(newState.isRunning)
+    }
 }
